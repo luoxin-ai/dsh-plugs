@@ -63,3 +63,15 @@ git subtree add --prefix=<plugin> <plugin-git-url> main
 ```
 
 > 注：桌面版 profile 若已符号链接旧路径，导入后把链接目标改为仓库内路径即可。
+
+## 发布到 npm
+
+1. 确认 `package.json` 满足：`license: "MIT"`、`files` 含 `lib`/`dist`/`README.md`、`exports["./client"]` 指向已构建产物
+2. 本地验证：`npm install && npm run build && npm test` 全绿
+3. 登录并发布：
+   ```sh
+   npm login          # 首次需要（在本人终端执行）
+   npm publish        # 包名需先在 registry 未被占用（npm view <name> 检查）
+   ```
+4. 回主 [README.md](README.md) 更新「从 npm 安装」表格的发布状态
+5. 之后每次改动发布新版本：`npm version patch && npm publish`（记得同步更新仓库内 version 与 README 表格）
