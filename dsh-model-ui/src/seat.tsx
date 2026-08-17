@@ -75,17 +75,38 @@ export function ModelSeat({ locked, available, directory, load, select, t }: Sea
 
   const currentChoice = useMemo(() => findCurrentChoice(state), [state]);
   const reasoning = currentChoice?.model.reasoning;
-  const effectiveEffort = state.current?.reasoningEffort ?? reasoning?.defaultEffort;
   const efforts = reasoning?.efforts ?? [];
-  const isMax =
-    reasoning !== undefined && effectiveEffort !== undefined && efforts.length > 0 &&
-    effectiveEffort === efforts[efforts.length - 1].id;
+  // A model exposing exactly ONE effort level is effectively pinned to it —
+  // show that level (and its max-wave) even when the adapter sets no default.
+  const effectiveEffort =
+    state.current?.reasoningEffort ??
+    reasoning?.defaultEffort ??
+    (efforts.length === 1 ? efforts[0].id : undefined);
+  const effortIndex =
+    reasoning !== undefined && effectiveEffort !== undefined
+      ? efforts.findIndex((level) => level.id === effectiveEffort)
+      : -1;
+  // Wave speed scales with the level. ratio is normalized to 0..1 so the
+  // fastest (Max) and slowest anchors are FIXED regardless of how many levels
+  // a given model publishes. The LOWEST level is a flat, motionless line;
+  // levels above it wave progressively faster.
+  const topIndex = efforts.length - 1;
+  const effortRatio = topIndex <= 0 ? (effortIndex >= 0 ? 1 : 0) : Math.max(0, effortIndex / topIndex);
+  const isTopLevel = effortRatio >= 1;
+  /** A concrete level is active → the wave shows (speed-scaled). */
+  const hasWave = reasoning !== undefined && effortIndex >= 0;
+  /** Lowest level: a flat, motionless line (no undulation). */
+  const isFlatLine = hasWave && effortRatio <= 0.001;
+  /** Wave duration: slowest ~1.1s → fastest (Max) 0.5s, a gentle ramp. */
+  const waveDuration = (1.1 - effortRatio * 0.6).toFixed(2);
   const effortLabel =
     reasoning === undefined
       ? undefined
       : effectiveEffort === undefined
-        ? t("effort.title")
+        ? t("effort.providerDefault")
         : efforts.find((level) => level.id === effectiveEffort)?.name ?? effectiveEffort;
+  /** A model with ≤1 effort level offers no choice — the chip is a static badge. */
+  const hasEffortChoice = reasoning !== undefined && efforts.length > 1;
   const modelLabel = currentChoice?.model.name ?? t("trigger.fallback");
 
   const closeAll = useCallback(() => {
@@ -138,52 +159,77 @@ export function ModelSeat({ locked, available, directory, load, select, t }: Sea
     ref: rootRef,
     className: "dmu-seat",
     children: [
-      jsxs("button", {
-        type: "button",
-        className: "dmu-model-btn",
-        disabled: locked,
-        title: t("trigger.aria", { model: modelLabel }),
-        onClick: () => {
-          setEffortOpen(false);
-          setModelOpen((open) => !open);
-          if (!modelOpen) load();
-        },
+      // Each trigger gets its own positioning anchor so menus/popovers center
+      // on THE TRIGGER, not on the whole seat row.
+      jsxs("span", {
+        className: "dmu-anchor",
         children: [
-          jsx("span", { className: "dmu-name", children: modelLabel }),
-          jsx("span", { className: "dmu-chev", children: modelOpen ? "▲" : "▼" })
+          jsxs("button", {
+            type: "button",
+            className: "dmu-model-btn",
+            disabled: locked,
+            title: t("trigger.aria", { model: modelLabel }),
+            onClick: () => {
+              setEffortOpen(false);
+              setModelOpen((open) => !open);
+              if (!modelOpen) load();
+            },
+            children: [
+              jsx("span", { className: "dmu-name", children: modelLabel }),
+              jsx("span", { className: "dmu-chev" + (modelOpen ? " dmu-chev-open" : ""), children: "▼" })
+            ]
+          }),
+          modelOpen &&
+            jsx(ModelMenu, {
+              state,
+              t,
+              currentProviderId: state.current === null ? null : state.current.provider,
+              currentModelId: state.current === null ? null : state.current.model,
+              onPick: chooseModel,
+              onReload: () => load()
+            })
         ]
       }),
       reasoning !== undefined &&
-        jsxs("button", {
-          type: "button",
-          className: "dmu-chip" + (isMax ? " dmu-max" : ""),
-          disabled: locked,
-          title: t("effort.aria", { effort: effortLabel ?? "" }),
-          onClick: () => {
-            setModelOpen(false);
-            setEffortOpen((open) => !open);
-          },
+        jsxs("span", {
+          className: "dmu-anchor",
           children: [
-            jsx("span", { className: "dmu-dot" }),
-            isMax && jsx("span", { className: "dmu-eq", children: [jsx("i", {}), jsx("i", {}), jsx("i", {}), jsx("i", {})] }),
-            jsx("span", { children: effortLabel })
+            jsxs("button", {
+              type: "button",
+              className:
+                "dmu-chip" +
+                (isTopLevel ? " dmu-max" : "") +
+                (hasEffortChoice ? "" : " dmu-static"),
+              disabled: locked || !hasEffortChoice,
+              title: hasEffortChoice
+                ? t("effort.aria", { effort: effortLabel ?? "" })
+                : t("effort.fixed", { effort: effortLabel ?? "" }),
+              onClick: () => {
+                if (!hasEffortChoice) return;
+                setModelOpen(false);
+                setEffortOpen((open) => !open);
+              },
+              children: [
+                jsx("span", { className: "dmu-dot" }),
+                isFlatLine
+                  ? jsx("span", { className: "dmu-flat" })
+                  : hasWave &&
+                      jsx("span", {
+                        className: "dmu-eq",
+                        style: { "--dmu-dur": waveDuration + "s" } as React.CSSProperties,
+                        children: [jsx("i", {}), jsx("i", {}), jsx("i", {}), jsx("i", {})]
+                      }),
+                jsx("span", { children: effortLabel })
+              ]
+            }),
+            effortOpen && reasoning !== undefined && hasEffortChoice &&
+              jsx(EffortPopover, {
+                efforts,
+                effectiveEffort,
+                t,
+                onPick: chooseEffort
+              })
           ]
-        }),
-      modelOpen &&
-        jsx(ModelMenu, {
-          state,
-          t,
-          currentModelId: state.current === null ? null : state.current.model,
-          onPick: chooseModel,
-          onReload: () => load()
-        }),
-      effortOpen && reasoning !== undefined &&
-        jsx(EffortPopover, {
-          efforts,
-          effectiveEffort,
-          isMax,
-          t,
-          onPick: chooseEffort
         })
     ]
   });
@@ -192,12 +238,14 @@ export function ModelSeat({ locked, available, directory, load, select, t }: Sea
 function ModelMenu({
   state,
   t,
+  currentProviderId,
   currentModelId,
   onPick,
   onReload
 }: {
   state: DirectoryState;
   t: SeatProps["t"];
+  currentProviderId: string | null;
   currentModelId: string | null;
   onPick: (group: ModelGroup, model: ModelMeta) => void;
   onReload: () => void;
@@ -216,33 +264,44 @@ function ModelMenu({
               jsx("span", { children: t("empty.models") }),
               jsx("button", {
                 type: "button",
-                className: "dmu-reset",
-                style: { marginLeft: 6 },
+                className: "dmu-reload",
                 onClick: onReload,
                 children: t("action.reload")
               })
             ]
           })
         }),
-      state.groups.map((group) =>
-        jsxs(Fragment, {
-          children: [
-            jsx("div", { className: "dmu-group", children: group.name ?? group.id }),
-            ...group.models.map((model) =>
-              jsxs("div", {
-                className: "dmu-row" + (model.id === currentModelId ? " dmu-active" : ""),
-                onClick: () => onPick(group, model),
-                children: [
-                  jsx("span", { children: model.name }),
-                  jsx("span", {
-                    className: "dmu-detail",
-                  children: model.description !== undefined ? model.description : ""
-                })
-              ]
-            })
-          )
-        ]}, group.id)
-      ),
+      jsxs("div", {
+        className: "dmu-groups",
+        children: state.groups.map((group) =>
+          jsxs(Fragment, {
+            children: [
+              jsx("div", { className: "dmu-groupTitle", children: group.name ?? group.id }),
+              ...group.models.map((model) =>
+                jsxs("button", {
+                  type: "button",
+                  className: "dmu-row",
+                  onClick: () => onPick(group, model),
+                  children: [
+                    jsx("span", {
+                      className: "dmu-check",
+                      children: group.id === currentProviderId && model.id === currentModelId ? "✓" : ""
+                    }),
+                    jsxs("span", {
+                      className: "dmu-copy",
+                      children: [
+                        jsx("span", { className: "dmu-modelName", children: model.name }),
+                        model.description !== undefined &&
+                          jsx("span", { className: "dmu-desc", children: model.description })
+                      ]
+                    })
+                  ]
+                }, `${group.id}/${model.id}`)
+              )
+            ]
+          }, group.id)
+        )
+      }),
       state.failures.length > 0 &&
         state.failures.map((failure) =>
           jsx("div", {
@@ -257,13 +316,11 @@ function ModelMenu({
 function EffortPopover({
   efforts,
   effectiveEffort,
-  isMax,
   t,
   onPick
 }: {
   efforts: EffortLevel[];
   effectiveEffort: string | undefined;
-  isMax: boolean;
   t: SeatProps["t"];
   onPick: (effortId: string | undefined) => void;
 }) {
@@ -297,6 +354,10 @@ function EffortPopover({
 
   const shownIndex = preview >= 0 ? preview : 0;
   const shown = preview < 0 ? null : efforts[shownIndex];
+  // track wave speed-scaled by the previewed level; lowest level = flat line
+  const topIndex = efforts.length - 1;
+  const previewRatio = topIndex <= 0 ? (preview >= 0 ? 1 : 0) : Math.max(0, preview / topIndex);
+  const previewDuration = (1.1 - previewRatio * 0.6).toFixed(2);
 
   return jsxs("div", {
     className: "dmu-popover",
@@ -314,7 +375,7 @@ function EffortPopover({
           })
         ]
       }),
-      jsx("div", { className: "dmu-name", children: shown === null ? t("effort.title") : shown.name }),
+      jsx("div", { className: "dmu-name", children: shown === null ? t("effort.providerDefault") : shown.name }),
       jsx("div", {
         className: "dmu-desc",
         children: shown === null ? t("effort.defaultDesc") : (shown.description ?? "")
@@ -331,9 +392,10 @@ function EffortPopover({
             value: shownIndex,
             onInput: (e: React.ChangeEvent<HTMLInputElement>) => setPreview(Number(e.target.value))
           }),
-          isMax && preview === efforts.length - 1 &&
+          preview > 0 &&
             jsx("div", {
               className: "dmu-trackwave",
+              style: { "--dmu-dur": previewDuration + "s" } as React.CSSProperties,
               children: jsx("svg", {
                 preserveAspectRatio: "none",
                 viewBox: "0 0 240 6",

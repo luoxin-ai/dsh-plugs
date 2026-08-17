@@ -21,10 +21,12 @@ const zh = {
   "blocked.composer": "当前模型不可用，请先选择模型",
   "empty.efforts": "当前模型未提供推理等级。",
   "effort.title": "推理强度",
+  "effort.providerDefault": "默认",
   "effort.reset": "使用模型默认",
   "effort.resetHint": "回到模型适配器默认的推理强度",
   "effort.defaultDesc": "由模型适配器决定推理强度。",
   "effort.aria": "推理等级，当前 {effort}",
+  "effort.fixed": "该模型仅提供一档推理强度：{effort}",
   "effort.max": "Max"
 };
 
@@ -43,10 +45,12 @@ const en = {
   "blocked.composer": "The current model is unavailable, select a model first",
   "empty.efforts": "The current model exposes no effort levels.",
   "effort.title": "Reasoning effort",
+  "effort.providerDefault": "Default",
   "effort.reset": "Use model default",
   "effort.resetHint": "Revert to the adapter's default reasoning effort",
   "effort.defaultDesc": "The model adapter decides the reasoning effort.",
   "effort.aria": "Reasoning effort, current {effort}",
+  "effort.fixed": "This model exposes a single fixed effort: {effort}",
   "effort.max": "Max"
 };
 

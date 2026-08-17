@@ -206,6 +206,20 @@ function runRegistration() {
   assert.equal(typeof injectProps.load, "function");
   assert.equal(typeof injectProps.select, "function");
   assert.ok(injectProps.directory, "directory store must be injected");
+
+  // injected stylesheet: borderless pill triggers + UPWARD-opening menus
+  const style = document.querySelector('style[data-plugin-css="dsh-model-ui"]');
+  assert.ok(style, "wave stylesheet injected");
+  const css = style.textContent;
+  assert.ok(
+    css.includes(".dmu-model-btn{min-width:0;max-width:220px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none"),
+    "model trigger is a borderless pill (no boxy frame)"
+  );
+  assert.ok(css.includes(".dmu-menu{position:absolute;bottom:calc(100% + 8px);left:50%"), "model menu opens UPWARD, centered above the trigger");
+  assert.ok(css.includes(".dmu-popover{position:absolute;bottom:calc(100% + 8px);left:50%"), "effort popover opens UPWARD, centered");
+  assert.ok(css.includes("@keyframes dmu-pop-in"), "popups have a small pop-in animation");
+  assert.ok(css.includes(".dmu-groups{min-height:0;overflow-y:auto}"), "menu has an inner scroll container");
+  assert.ok(css.includes(".dmu-chip.dmu-static"), "single-effort models render a static chip");
 }
 
 function runSplitRender() {
@@ -218,13 +232,86 @@ function runSplitRender() {
   assert.ok(buttons[1].className.includes("dmu-chip"), "second control is the effort chip");
   assert.ok(textOf(buttons[1]).includes("Max"), "chip shows the effective effort label");
   assert.ok(buttons[1].className.includes("dmu-max"), "chip carries dmu-max at the highest effort");
-  assert.ok(host.container.querySelector(".dmu-eq"), "equalizer bars render at max effort");
+  const maxEq = host.container.querySelector(".dmu-eq");
+  assert.ok(maxEq, "equalizer bars render at max effort");
+  const maxDur = parseFloat(maxEq.style.getPropertyValue("--dmu-dur") || "1");
+  assert.ok(maxDur < 0.8, "max wave is fast (duration < 0.8s): " + maxDur);
 
-  // switch to a lower level → wave gone
+  // switch to a midpoint level → wave still shows but SLOWER, no dmu-max
   state = makeState({ current: { provider: "deepseek-official", model: "deepseek-v4-flash", reasoningEffort: "high" } });
   host.rerender({});
-  assert.ok(!host.container.querySelector(".dmu-chip").className.includes("dmu-max"), "no dmu-max at non-max effort");
-  assert.ok(!host.container.querySelector(".dmu-eq"), "no equalizer bars below max");
+  const chip = host.container.querySelector(".dmu-chip");
+  assert.ok(!chip.className.includes("dmu-max"), "no dmu-max at midpoint effort");
+  const midEq = host.container.querySelector(".dmu-eq");
+  assert.ok(midEq, "wave renders at midpoint effort too (speed distinguishes level)");
+  const midDur = parseFloat(midEq.style.getPropertyValue("--dmu-dur") || "1");
+  assert.ok(midDur > maxDur, "midpoint wave is slower than max (" + midDur + " > " + maxDur + ")");
+
+  // lowest level (low, ratio 0) → a flat, motionless line, no undulation
+  state = makeState({ current: { provider: "deepseek-official", model: "deepseek-v4-flash", reasoningEffort: "low" } });
+  host.rerender({});
+  assert.ok(!host.container.querySelector(".dmu-eq"), "lowest level has no animated equalizer");
+  assert.ok(host.container.querySelector(".dmu-flat"), "lowest level shows a flat line");
+
+  // a model at its default effort (medium) → wave at medium speed
+  state = makeState({ current: { provider: "deepseek-official", model: "deepseek-v4-flash" } });
+  host.rerender({});
+  const defEq = host.container.querySelector(".dmu-eq");
+  assert.ok(defEq, "default effort is a concrete level → wave shows (medium speed)");
+
+  // a model with NO default and NO explicit effort → no concrete level → no wave
+  state = makeState({
+    groups: [
+      {
+        id: "kimi",
+        name: "Kimi",
+        models: [
+          { id: "k2", name: "Kimi K2", reasoning: { efforts: EFFORTS } } // no defaultEffort
+        ]
+      }
+    ],
+    current: { provider: "kimi", model: "k2" }
+  });
+  host.rerender({});
+  assert.ok(host.container.querySelector(".dmu-chip"), "chip still renders for a no-default model");
+  assert.ok(!host.container.querySelector(".dmu-eq"), "no wave when no concrete level is active");
+
+  host.root.unmount();
+}
+
+function runSingleEffortStatic() {
+  // Kimi-K3-style model: a single fixed effort level → the chip is a static
+  // badge (no dead slider, no popover) pinned to that level.
+  resetStore();
+  state = makeState({
+    groups: [
+      {
+        id: "kimi",
+        name: "Kimi",
+        models: [
+          {
+            id: "kimi-k3",
+            name: "Kimi K3",
+            // Real Kimi K3 shape: ONE effort, NO defaultEffort, host current
+            // carries no explicit effort either.
+            reasoning: { efforts: [{ id: "max", name: "Max", description: "固定" }] }
+          }
+        ]
+      }
+    ],
+    current: { provider: "kimi", model: "kimi-k3" }
+  });
+  const p = boot();
+  const host = mountSeat(p);
+  const chip = host.container.querySelector(".dmu-chip");
+  assert.ok(chip, "chip renders for a single-effort model");
+  assert.ok(chip.className.includes("dmu-static"), "chip is static (no choice)");
+  assert.ok(chip.disabled, "chip disabled — a fixed effort offers no interaction");
+  assert.ok(textOf(chip).includes("Max"), "chip shows the pinned single level, not 默认");
+  assert.ok(chip.className.includes("dmu-max"), "single pinned level is treated as max (wave)");
+  // clicking must NOT open a popover
+  act(() => { chip.click(); });
+  assert.ok(!host.container.querySelector(".dmu-popover"), "no popover for a single-effort model");
 
   host.root.unmount();
 }
@@ -283,6 +370,7 @@ function runModelMenu() {
 
 runRegistration();
 runSplitRender();
+runSingleEffortStatic();
 runEffortSlider();
 runModelMenu();
 console.log("ALL HARNESS SCENARIOS PASSED");
