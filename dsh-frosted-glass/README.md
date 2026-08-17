@@ -1,5 +1,7 @@
 # dsh-frosted-glass
 
+> 所属合集：[dsh-plugs](https://github.com/luoxin-ai/dsh-plugs) ｜ 安装速查：[QUICKSTART.md](QUICKSTART.md)
+
 **毛玻璃皮肤 for DeepSeek Harness** — 真正的 `backdrop-filter` 模糊 + 半透明表面 token + 自定义壁纸。
 
 Frosted-glass skin for the DSH Web UI (desktop and `dsh web`): real backdrop blur over translucent surface tokens, with a full-page wallpaper.
