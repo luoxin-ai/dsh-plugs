@@ -1,0 +1,5 @@
+node_modules/
+dist/_bundle.cjs
+*.tgz
+.DS_Store
+.npm-cache/

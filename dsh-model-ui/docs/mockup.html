@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DSH 模型 / 档位改造 — 整体方案画廊</title>
+<style>
+  :root {
+    --bg: #f3f4f6; --surface: #ffffff; --border: #e4e7ec; --border2: #d0d5dd;
+    --label1: #1f2329; --label2: #5f6672; --label3: #8a919c;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif; background: var(--bg); color: var(--label1); margin: 0; padding: 28px 24px 80px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--label3); font-size: 13px; margin-bottom: 6px; }
+  .note { color: var(--label3); font-size: 12px; margin-bottom: 26px; line-height: 1.7; }
+
+  .scheme { background: var(--surface); border: 2px solid var(--border); border-radius: 16px; padding: 20px 22px; margin-bottom: 22px; transition: border-color .2s, box-shadow .2s; }
+  .scheme.selected { border-color: var(--accent, #4d6bfe); box-shadow: 0 0 0 3px rgba(77,107,254,.18); }
+  .scheme-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+  .scheme-name { font-size: 16px; font-weight: 700; }
+  .scheme-meta { font-size: 12px; color: var(--label3); }
+  .scheme-desc { font-size: 12.5px; color: var(--label2); margin-bottom: 14px; line-height: 1.6; }
+  .pick-btn { margin-left: auto; border: 1px solid var(--border2); background: #fff; color: var(--label2); font-size: 12px; padding: 5px 14px; border-radius: 999px; cursor: pointer; }
+  .scheme.selected .pick-btn { background: var(--accent, #4d6bfe); border-color: transparent; color: #fff; }
+
+  .composer { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+  .composer .input-mock { flex: 1; color: var(--label3); font-size: 13px; }
+  .toolrow { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--label3); margin-bottom: 8px; flex-wrap: wrap; }
+  .model-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border2); background: #fff; color: var(--label1); cursor: pointer; }
+  .effort-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--border2); background: #fff; color: var(--label1); position: relative; transition: all .15s; }
+  .effort-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent, #4d6bfe); }
+  .badge { font-size: 11px; color: var(--label3); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; }
+
+  .stage { margin-top: 12px; display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .level-row { display: flex; gap: 4px; align-items: center; font-size: 11px; color: var(--label3); flex-wrap: wrap; }
+  .level-row button { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border2); background: #fff; color: var(--label2); cursor: pointer; }
+  .level-row button.active { background: var(--accent, #4d6bfe); border-color: transparent; color: #fff; }
+
+  .popover { border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: 0 10px 36px rgba(0,0,0,.14); padding: 14px 16px; width: 320px; }
+  .popover .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .popover .head .t { font-size: 12px; color: var(--label3); }
+  .reset { font-size: 11px; color: var(--accent, #4d6bfe); cursor: pointer; border: none; background: none; padding: 0; }
+  .effort-name { font-size: 14px; font-weight: 700; }
+  .effort-desc { font-size: 12px; color: var(--label2); margin-top: 2px; min-height: 18px; }
+  .slider-wrap { margin-top: 10px; }
+  input[type="range"] { width: 100%; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px; background: #e6e8ee; outline: none; margin: 8px 0 2px; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent, #4d6bfe); border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); cursor: pointer; }
+  .ticks { display: flex; justify-content: space-between; font-size: 10px; color: var(--label3); }
+  .open-panel { margin-top: 10px; font-size: 12px; color: var(--label2); border: 1px solid var(--border2); background: #fff; padding: 4px 12px; border-radius: 8px; cursor: pointer; }
+
+  .eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+  .eq i { display: block; width: 3px; border-radius: 1px; background: var(--accent, #4d6bfe); animation: eq 1s ease-in-out infinite; }
+  .eq i:nth-child(1) { height: 60%; animation-delay: 0s; }
+  .eq i:nth-child(2) { height: 100%; animation-delay: .15s; }
+  .eq i:nth-child(3) { height: 45%; animation-delay: .3s; }
+  .eq i:nth-child(4) { height: 80%; animation-delay: .45s; }
+  @keyframes eq { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+
+  .aurora-chip { background: linear-gradient(120deg, #ffd86b, #ff8a5c, #ff5c8a, #a05cff, #5c8aff, #ffd86b); background-size: 300% 100%; animation: flow 3s linear infinite; padding: 1.5px; border-radius: 999px; }
+  .aurora-chip .inner { background: #fff; border-radius: 999px; padding: 3px 10px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--label1); }
+  .aurora-chip .inner .dot { background: #a05cff; }
+  .glow { animation: glow 1.6s ease-in-out infinite; }
+  @keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(160,92,255,.55); } 50% { box-shadow: 0 0 0 7px rgba(160,92,255,0); } }
+  @keyframes flow { 0% { background-position: 0% 0; } 100% { background-position: 300% 0; } }
+
+  .wave-wrap { padding-bottom: 9px; }
+  .wave-line { position: absolute; left: 8px; right: 8px; bottom: 1px; overflow: hidden; height: 7px; }
+  .wave-line svg { display: block; width: 200%; height: 7px; }
+  .wave-line path { stroke: var(--accent, #2fb3a6); stroke-width: 1.6; fill: none; animation: wave-move 2.2s linear infinite; }
+  @keyframes wave-move { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+  .wave-track { position: absolute; left: 0; right: 0; top: 14px; height: 6px; border-radius: 3px; overflow: hidden; pointer-events: none; }
+  .wave-track svg { width: 200%; height: 100%; display: block; }
+  .wave-track path { stroke: var(--accent, #4d6bfe); stroke-width: 2; fill: none; animation: wave-move 1.4s linear infinite; }
+
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--label2); margin-top: 18px; }
+  .legend b { color: var(--label1); }
+</style>
+</head>
+<body>
+
+<h1>DSH 模型 / 档位改造 —— 整体方案画廊</h1>
+<div class="sub">交互已确认：滑块 + 吸附。下面是 4 套「布局 × 波动效果」整体方案，全部可交互</div>
+<div class="note">每套方案：点「选这个」标记；点档位按钮切换等级（只有 Max 出现波动）；拖滑块释放吸附；「打开档位面板」看弹出面板。</div>
+
+<section class="scheme" id="s1" style="--accent:#4d6bfe">
+  <div class="scheme-head">
+    <span class="scheme-name">方案一「音浪」</span>
+    <span class="scheme-meta">布局 A · 并排替换 ｜ 波动：均衡器音浪 ｜ 主色：DSH 蓝</span>
+    <button class="pick-btn" onclick="pick(1)">选这个</button>
+  </div>
+  <div class="scheme-desc">经典稳重的选择：输入栏右侧 [模型▾][●音浪 Max] 并排；最高档时胶囊内 4 根音浪条跳动。</div>
+  <div class="composer">
+    <span class="input-mock">输入消息…</span>
+    <button class="model-btn">DeepSeek-V4-Flash ▾</button>
+    <button class="effort-chip s-chip" data-wave="eq"><span class="dot"></span><span class="s-label">Max</span></button>
+    <span class="badge">上下文 45%</span>
+  </div>
+  <div class="stage">
+    <div class="level-row s-levels">
+      <span>档位：</span>
+      <button data-lv="0">Low</button><button data-lv="1">Medium</button><button data-lv="2">High</button><button data-lv="3">Ultra</button><button data-lv="4" class="active">Max</button>
+    </div>
+    <div>
+      <button class="open-panel s-open">打开档位面板 ▾</button>
+      <div class="popover s-pop" hidden>
+        <div class="head"><span class="t">推理强度</span><button class="reset s-reset">使用模型默认</button></div>
+        <div class="effort-name s-name">Max</div>
+        <div class="effort-desc s-desc">全力以赴：所有推理预算用于复杂任务。</div>
+        <div class="slider-wrap">
+          <input type="range" class="s-slider" min="0" max="4" step="1" value="4" />
+          <div class="ticks"><span>Low</span><span>Medium</span><span>High</span><span>Ultra</span><span>Max</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scheme" id="s2" style="--accent:#a05cff">
+  <div class="scheme-head">
+    <span class="scheme-name">方案二「极光」</span>
+    <span class="scheme-meta">布局 B · 档位移到工具行 ｜ 波动：脉冲光晕 + 流动渐变边框 ｜ 主色：极光紫</span>
+    <button class="pick-btn" onclick="pick(2)">选这个</button>
+  </div>
+  <div class="scheme-desc">高级感路线：档位胶囊浮到输入框上方工具行；最高档时胶囊边框彩色渐变流动 + 光晕呼吸扩散。</div>
+  <div class="toolrow">
+    <span>工具行：</span>
+    <button class="effort-chip s-chip" data-wave="aurora"><span class="dot"></span><span class="s-label">Max</span></button>
+    <span>⌘K 命令 / 附件 / 技能…</span>
+  </div>
+  <div class="composer">
+    <span class="input-mock">输入消息…</span>
+    <button class="model-btn">DeepSeek-V4-Flash ▾</button>
+    <span class="badge">上下文 45%</span>
+  </div>
+  <div class="stage">
+    <div class="level-row s-levels">
+      <span>档位：</span>
+      <button data-lv="0">Low</button><button data-lv="1">Medium</button><button data-lv="2">High</button><button data-lv="3">Ultra</button><button data-lv="4" class="active">Max</button>
+    </div>
+    <div>
+      <button class="open-panel s-open">打开档位面板 ▾</button>
+      <div class="popover s-pop" hidden>
+        <div class="head"><span class="t">推理强度</span><button class="reset s-reset">使用模型默认</button></div>
+        <div class="effort-name s-name">Max</div>
+        <div class="effort-desc s-desc">全力以赴：所有推理预算用于复杂任务。</div>
+        <div class="slider-wrap">
+          <input type="range" class="s-slider" min="0" max="4" step="1" value="4" />
+          <div class="ticks"><span>Low</span><span>Medium</span><span>High</span><span>Ultra</span><span>Max</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scheme" id="s3" style="--accent:#2fb3a6">
+  <div class="scheme-head">
+    <span class="scheme-name">方案三「浪潮」</span>
+    <span class="scheme-meta">布局 A · 并排替换 ｜ 波动：流动正弦波线 ｜ 主色：潮汐青</span>
+    <button class="pick-btn" onclick="pick(3)">选这个</button>
+  </div>
+  <div class="scheme-desc">极简路线：并排布局；最高档时胶囊底部一条正弦波线持续流动，安静不抢眼。</div>
+  <div class="composer">
+    <span class="input-mock">输入消息…</span>
+    <button class="model-btn">DeepSeek-V4-Flash ▾</button>
+    <button class="effort-chip s-chip" data-wave="sine"><span class="dot"></span><span class="s-label">Max</span></button>
+    <span class="badge">上下文 45%</span>
+  </div>
+  <div class="stage">
+    <div class="level-row s-levels">
+      <span>档位：</span>
+      <button data-lv="0">Low</button><button data-lv="1">Medium</button><button data-lv="2">High</button><button data-lv="3">Ultra</button><button data-lv="4" class="active">Max</button>
+    </div>
+    <div>
+      <button class="open-panel s-open">打开档位面板 ▾</button>
+      <div class="popover s-pop" hidden>
+        <div class="head"><span class="t">推理强度</span><button class="reset s-reset">使用模型默认</button></div>
+        <div class="effort-name s-name">Max</div>
+        <div class="effort-desc s-desc">全力以赴：所有推理预算用于复杂任务。</div>
+        <div class="slider-wrap">
+          <input type="range" class="s-slider" min="0" max="4" step="1" value="4" />
+          <div class="ticks"><span>Low</span><span>Medium</span><span>High</span><span>Ultra</span><span>Max</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scheme" id="s4" style="--accent:#4d6bfe">
+  <div class="scheme-head">
+    <span class="scheme-name">方案四「双浪」</span>
+    <span class="scheme-meta">布局 A · 并排替换 ｜ 波动：胶囊音浪 + 滑块轨道联动波浪 ｜ 主色：DSH 蓝</span>
+    <button class="pick-btn" onclick="pick(4)">选这个</button>
+  </div>
+  <div class="scheme-desc">沉浸联动：最高档时不仅胶囊内有音浪，弹出的档位面板里滑块轨道也变成流动波浪——整个档位控件都在「波动」。</div>
+  <div class="composer">
+    <span class="input-mock">输入消息…</span>
+    <button class="model-btn">DeepSeek-V4-Flash ▾</button>
+    <button class="effort-chip s-chip" data-wave="eq"><span class="dot"></span><span class="s-label">Max</span></button>
+    <span class="badge">上下文 45%</span>
+  </div>
+  <div class="stage">
+    <div class="level-row s-levels">
+      <span>档位：</span>
+      <button data-lv="0">Low</button><button data-lv="1">Medium</button><button data-lv="2">High</button><button data-lv="3">Ultra</button><button data-lv="4" class="active">Max</button>
+    </div>
+    <div>
+      <button class="open-panel s-open">打开档位面板 ▾</button>
+      <div class="popover s-pop" hidden>
+        <div class="head"><span class="t">推理强度</span><button class="reset s-reset">使用模型默认</button></div>
+        <div class="effort-name s-name">Max</div>
+        <div class="effort-desc s-desc">全力以赴：所有推理预算用于复杂任务。</div>
+        <div class="slider-wrap s-trackwrap" style="position:relative">
+          <input type="range" class="s-slider" min="0" max="4" step="1" value="4" />
+          <div class="wave-track s-trackwave" hidden>
+            <svg preserveAspectRatio="none" viewBox="0 0 240 6"><path d="M0,3 Q7.5,0 15,3 T30,3 T45,3 T60,3 T75,3 T90,3 T105,3 T120,3 T135,3 T150,3 T165,3 T180,3 T195,3 T210,3 T225,3 T240,3" /></svg>
+          </div>
+          <div class="ticks"><span>Low</span><span>Medium</span><span>High</span><span>Ultra</span><span>Max</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="legend">
+  <span><b>交互说明</b></span>
+  <span>· 点档位按钮切换等级 —— 只有 <b>Max</b> 出波动</span>
+  <span>· 拖滑块 —— 释放吸附到最近档</span>
+  <span>· 「使用模型默认」回到默认档</span>
+  <span>· 告诉我编号即可（如「方案四」）</span>
+</div>
+
+<script>
+  const LEVELS = [
+    { name: "Low",    desc: "轻量：适合简单问答，响应最快。" },
+    { name: "Medium", desc: "平衡：日常任务的标准推理预算。" },
+    { name: "High",   desc: "深度：复杂任务投入更多推理。" },
+    { name: "Ultra",  desc: "重度：接近上限的推理投入。" },
+    { name: "Max",    desc: "全力以赴：所有推理预算用于复杂任务。" }
+  ];
+  const WAVE_HTML = {
+    eq: '<span class="eq"><i></i><i></i><i></i><i></i></span>',
+    sine: '<span class="wave-line"><svg preserveAspectRatio="none" viewBox="0 0 120 8"><path d="M0,4 Q7.5,0 15,4 T30,4 T45,4 T60,4 T75,4 T90,4 T105,4 T120,4"/></svg></span>'
+  };
+
+  function pick(n) {
+    document.querySelectorAll(".scheme").forEach((s) => s.classList.remove("selected"));
+    document.getElementById("s" + n).classList.add("selected");
+  }
+
+  document.querySelectorAll(".scheme").forEach((scheme) => {
+    const chip = scheme.querySelector(".s-chip");
+    const label = scheme.querySelector(".s-label");
+    const levels = scheme.querySelectorAll(".s-levels button");
+    const slider = scheme.querySelector(".s-slider");
+    const name = scheme.querySelector(".s-name");
+    const desc = scheme.querySelector(".s-desc");
+    const pop = scheme.querySelector(".s-pop");
+    const open = scheme.querySelector(".s-open");
+    const reset = scheme.querySelector(".s-reset");
+    const wave = chip.dataset.wave;
+    const trackwave = scheme.querySelector(".s-trackwave");
+
+    let lv = 4;
+    function applyChip() {
+      const isMax = lv === 4;
+      chip.innerHTML = "";
+      if (wave === "aurora") {
+        chip.className = "aurora-chip" + (isMax ? " glow" : "");
+        chip.innerHTML = '<span class="inner"><span class="dot"></span><span class="s-label">' + LEVELS[lv].name + "</span></span>";
+      } else {
+        chip.className = "effort-chip s-chip" + (isMax ? " wave-wrap" : "");
+        chip.innerHTML = '<span class="dot"></span><span class="s-label">' + LEVELS[lv].name + "</span>";
+        if (isMax) chip.insertAdjacentHTML("beforeend", WAVE_HTML[wave]);
+      }
+      label.textContent = LEVELS[lv].name;
+      levels.forEach((b) => b.classList.toggle("active", Number(b.dataset.lv) === lv));
+      slider.value = lv;
+      name.textContent = LEVELS[lv].name;
+      desc.textContent = LEVELS[lv].desc;
+      if (trackwave) trackwave.hidden = !isMax;
+    }
+    levels.forEach((b) => b.addEventListener("click", () => { lv = Number(b.dataset.lv); applyChip(); }));
+    slider.addEventListener("input", () => { lv = Number(slider.value); applyChip(); });
+    slider.addEventListener("change", () => { lv = Number(slider.value); applyChip(); });
+    reset.addEventListener("click", () => { lv = 2; applyChip(); });
+    open.addEventListener("click", () => { pop.hidden = !pop.hidden; open.textContent = pop.hidden ? "打开档位面板 ▾" : "收起档位面板 ▴"; });
+    applyChip();
+  });
+</script>
+</body>
+</html>

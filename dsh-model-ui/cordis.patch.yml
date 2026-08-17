@@ -1,0 +1,11 @@
+# dsh-model-ui profile patch layer.
+#
+# 1. Disable the native model-selection plugin (its seat registers the same
+#    `conversation.input.model` slot; the slot is single-occupant).
+# 2. Register our split seat (model dropdown + effort slider, 方案四「双浪」).
+- id: ui-model-selection
+  disabled: true
+
+- insert:
+    - id: model-ui
+      name: 'dsh-model-ui'

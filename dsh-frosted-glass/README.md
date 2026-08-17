@@ -13,6 +13,26 @@ Frosted-glass skin for the DSH Web UI (desktop and `dsh web`): real backdrop blu
 - **实时调节**：设置 → 通用设置 → 毛玻璃：开关、透明度滑块（3%–95%）、模糊强度滑块（0–30px）、背景图（上传自动压缩 / URL）
 - **偏好持久化**：localStorage（第三方视觉偏好不进 Host settings wire，这是官方边界）
 
+## 效果预览
+
+> 截图由 `scripts/cdp-shots.mjs` 驱动真实 UI 自动生成（需要 Chrome `--remote-debugging-port=9222` + 运行中的 DSH Web UI）：
+> ```sh
+> # 1. 启动 DSH（`dsh web` 或桌面版），记下其 URL（默认 http://127.0.0.1:38999）
+> # 2. 用带远程调试端口的 Chrome/Edge 打开该 URL：--remote-debugging-port=9222
+> # 3. 生成截图到 docs/screenshots/ 并提交
+> DSH_URL=http://127.0.0.1:38999 node scripts/cdp-shots.mjs docs/screenshots
+> ```
+
+| 主界面 | 设置面板 |
+| --- | --- |
+| ![主界面](docs/screenshots/1-main.png) | ![设置面板](docs/screenshots/2-settings.png) |
+
+| 毛玻璃关 | 毛玻璃开 |
+| --- | --- |
+| ![关闭对比](docs/screenshots/3-glass-off.png) | ![开启效果](docs/screenshots/4-glass-on-again.png) |
+
+> 占位图：仓库暂未附截图，运行上方命令生成后 `git add docs/screenshots` 提交即可自动出现在本页。
+
 ## 安装
 
 ### 桌面版（无 pnpm 环境）

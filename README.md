@@ -9,6 +9,7 @@ A curated collection of plugins (skins / tools) for the DeepSeek Harness Web UI 
 | 子项目 | 版本 | 类型 | 一句话说明 | 快速开始 |
 | --- | --- | --- | --- | --- |
 | [dsh-frosted-glass](dsh-frosted-glass/) | 0.1.0 | 可视化皮肤 | 毛玻璃皮肤：真实 `backdrop-filter` 模糊 + 半透明表面 + 自定义壁纸，设置面板实时调节 | [QUICKSTART](dsh-frosted-glass/QUICKSTART.md) |
+| [dsh-model-ui](dsh-model-ui/) | 0.1.0 | 输入区增强 | 拆分模型选择与推理档位：模型下拉 + Claude `/effort` 风格档位滑块（吸附），MAX/ultra 档位双浪动效 | [QUICKSTART](dsh-model-ui/QUICKSTART.md) |
 
 > 更多插件持续收集中——新增插件请遵循 [CONTRIBUTING.md](CONTRIBUTING.md) 规范。
 
@@ -18,6 +19,29 @@ A curated collection of plugins (skins / tools) for the DeepSeek Harness Web UI 
 
 1. 选择一个子项目（如 `dsh-frosted-glass`）
 2. 按该子项目的 QUICKSTART 安装进你的 DSH 环境（桌面版走符号链接，CLI 走 `dsh plugin`）
+
+### 从 npm 安装（已发布的插件）
+
+| 包名 | 发布状态 |
+| --- | --- |
+| `dsh-frosted-glass` | 待发布（`npm login` 后执行 `npm publish` 即可） |
+| `dsh-model-ui` | 待发布（同上） |
+
+发布后即可在 DSH profile 目录内安装：
+
+```sh
+# 在 DSH profile 目录内安装（npm registry 方式）
+npm install dsh-frosted-glass
+# 再按插件的 QUICKSTART 完成 bundles 登记即可
+```
+
+## 效果预览
+
+| 插件 | 截图 |
+| --- | --- |
+| dsh-frosted-glass | [主界面](dsh-frosted-glass/docs/screenshots/1-main.png) · [设置面板](dsh-frosted-glass/docs/screenshots/2-settings.png) · [毛玻璃开/关对比](dsh-frosted-glass/docs/screenshots/4-glass-on-again.png) |
+
+> 截图由各插件自带的 CDP 脚本生成（详见 [dsh-frosted-glass/README.md](dsh-frosted-glass/README.md) 的「效果预览」）——首次克隆仓库时截图未入库，运行脚本生成后提交即可。
 
 ## 仓库结构
 
